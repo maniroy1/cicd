@@ -1,0 +1,14 @@
+language: java
+jdk:
+  - openjdk17
+
+cache:
+  directories:
+    - $HOME/.m2
+
+script:
+  - mvn clean verify -B
+
+# Build the runnable jar as an artifact of the build
+after_success:
+  - mvn package -B -DskipTests
