@@ -56,12 +56,41 @@ curl -X POST http://localhost:8080/api/v1/inventory \
   }'
 ```
 
+## Environments & Profiles
+
+Configuration is split by Spring profile, not by Docker image — one image runs
+everywhere, the environment is selected at runtime.
+
+| Profile   | Database          | Config file                     | When it runs                    |
+|-----------|-------------------|---------------------------------|---------------------------------|
+| (default) | H2 (in-memory)    | `application.properties`        | Local dev, tests                |
+| `prod`    | PostgreSQL        | `application-prod.properties`   | Production / docker-compose     |
+
+The `prod` profile reads everything (DB URL, credentials, port) from environment
+variables, so no secrets are baked into the image. Activate it with
+`SPRING_PROFILES_ACTIVE=prod`.
+
 ## Docker
+
+Single-image build (runs with the default in-memory H2 database):
 
 ```bash
 docker build -t inventory-management .
 docker run -p 8080:8080 inventory-management
 ```
+
+## Production-style run with docker-compose
+
+Starts the app on the `prod` profile against a real PostgreSQL container:
+
+```bash
+docker compose up --build
+```
+
+The app comes up on `http://localhost:8080` once Postgres is healthy. Data
+persists in the `db-data` volume across restarts. In a real deployment, supply
+your own `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` and drop the `DDL_AUTO=update`
+override so Hibernate only validates the schema (`validate`) instead of mutating it.
 
 ## CI
 

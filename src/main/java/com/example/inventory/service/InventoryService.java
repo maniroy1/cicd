@@ -4,6 +4,8 @@ import com.example.inventory.exception.DuplicateSkuException;
 import com.example.inventory.exception.ItemNotFoundException;
 import com.example.inventory.model.InventoryItem;
 import com.example.inventory.repository.InventoryItemRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +14,8 @@ import java.util.List;
 @Service
 @Transactional
 public class InventoryService {
+
+    private static final Logger log = LoggerFactory.getLogger(InventoryService.class);
 
     private final InventoryItemRepository repository;
 
@@ -48,10 +52,14 @@ public class InventoryService {
 
     public InventoryItem createItem(InventoryItem item) {
         if (repository.existsBySku(item.getSku())) {
+            log.warn("Rejected create: SKU '{}' already exists", item.getSku());
             throw new DuplicateSkuException(item.getSku());
         }
         item.setId(null);
-        return repository.save(item);
+        InventoryItem saved = repository.save(item);
+        log.info("Created item id={} sku={} name='{}' qty={}",
+                saved.getId(), saved.getSku(), saved.getName(), saved.getQuantity());
+        return saved;
     }
 
     public InventoryItem updateItem(Long id, InventoryItem updated) {
@@ -68,7 +76,9 @@ public class InventoryService {
         existing.setQuantity(updated.getQuantity());
         existing.setPrice(updated.getPrice());
         existing.setCategory(updated.getCategory());
-        return repository.save(existing);
+        InventoryItem saved = repository.save(existing);
+        log.info("Updated item id={} sku={} qty={}", saved.getId(), saved.getSku(), saved.getQuantity());
+        return saved;
     }
 
     public InventoryItem adjustQuantity(Long id, int delta) {
@@ -77,11 +87,15 @@ public class InventoryService {
 
         int newQuantity = existing.getQuantity() + delta;
         if (newQuantity < 0) {
+            log.warn("Rejected quantity adjust for id={}: delta={} would drop below 0 (current={})",
+                    id, delta, existing.getQuantity());
             throw new IllegalArgumentException(
                     "Insufficient stock: current quantity is " + existing.getQuantity());
         }
         existing.setQuantity(newQuantity);
-        return repository.save(existing);
+        InventoryItem saved = repository.save(existing);
+        log.info("Adjusted quantity for id={} by {} -> {}", id, delta, newQuantity);
+        return saved;
     }
 
     public void deleteItem(Long id) {
@@ -89,5 +103,6 @@ public class InventoryService {
             throw new ItemNotFoundException(id);
         }
         repository.deleteById(id);
+        log.info("Deleted item id={}", id);
     }
 }
