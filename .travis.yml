@@ -2,6 +2,12 @@ language: java
 jdk:
   - openjdk17
 
+# Only build the main branch and any feature/* branch on push.
+branches:
+  only:
+    - main
+    - /^feature\/.*$/
+
 cache:
   directories:
     - $HOME/.m2
