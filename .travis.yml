@@ -1,6 +1,6 @@
-language: java
-jdk:
-  - openjdk17
+# Run the build and tests inside a Docker container so the test environment
+# matches everywhere (locally, in CI). Travis just provides the Docker daemon.
+language: minimal
 
 # Only build the main branch and any feature/* branch on push.
 branches:
@@ -8,13 +8,20 @@ branches:
     - main
     - /^feature\/.*$/
 
+services:
+  - docker
+
+# Cache the host's Maven repo; it is mounted into the container so dependencies
+# are not re-downloaded on every build.
 cache:
   directories:
     - $HOME/.m2
 
 script:
-  - mvn clean verify -B
-
-# Build the runnable jar as an artifact of the build
-after_success:
-  - mvn package -B -DskipTests
+  - >
+    docker run --rm
+    -v "$PWD":/app
+    -v "$HOME/.m2":/root/.m2
+    -w /app
+    maven:3.9-eclipse-temurin-17
+    mvn -B clean verify
