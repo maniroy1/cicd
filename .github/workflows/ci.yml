@@ -61,3 +61,22 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ---------- JOB 3: DEPLOY TO EC2 (only if image was pushed) ----------
+  deploy:
+    needs: build-and-push       # waits for the image to be in ECR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2 over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/app
+            aws ecr get-login-password --region ap-south-1 \
+              | docker login --username AWS --password-stdin 281535664028.dkr.ecr.ap-south-1.amazonaws.com
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
