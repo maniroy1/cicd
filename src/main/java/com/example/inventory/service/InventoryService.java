@@ -26,7 +26,7 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public List<InventoryItem> getAllItems() {
         List<InventoryItem> items = repository.findAll();
-        log.info("Fetched {} inventory item(s)", items.size());
+        log.info("Fetched {} inventory item(s) from the database", items.size());
         return items;
     }
 
