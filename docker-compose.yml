@@ -1,0 +1,40 @@
+# Runs the inventory app against a real PostgreSQL database, mirroring a
+# production-style deployment. Start with: docker compose up --build
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: inventorydb
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: changeme
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory -d inventorydb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://db:5432/inventorydb
+      DB_USERNAME: inventory
+      DB_PASSWORD: changeme
+      # Demo DB starts empty, so let Hibernate create the schema on first boot.
+      # Remove this in a real prod deployment (defaults to "validate").
+      DDL_AUTO: update
+      # Write logs inside the container to a path backed by the app-logs volume.
+      LOG_FILE: /app/logs/inventory.log
+    volumes:
+      - app-logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  app-logs:
