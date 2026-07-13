@@ -20,3 +20,5 @@ target/
 ### Logs ###
 *.log
 logs/
+
+cicdnew.pem

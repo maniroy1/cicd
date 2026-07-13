@@ -6,6 +6,8 @@ import com.example.inventory.model.InventoryItem;
 import com.example.inventory.repository.InventoryItemRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,8 +32,10 @@ public class InventoryService {
         return items;
     }
 
+    @Cacheable(value = "items", key = "#id")
     @Transactional(readOnly = true)
     public InventoryItem getItemById(Long id) {
+        log.info("Cache miss - loading item id={} from the database", id);
         return repository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException(id));
     }
@@ -64,6 +68,7 @@ public class InventoryService {
         return saved;
     }
 
+    @CacheEvict(value = "items", key = "#id")
     public InventoryItem updateItem(Long id, InventoryItem updated) {
         InventoryItem existing = repository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException(id));
@@ -83,6 +88,7 @@ public class InventoryService {
         return saved;
     }
 
+    @CacheEvict(value = "items", key = "#id")
     public InventoryItem adjustQuantity(Long id, int delta) {
         InventoryItem existing = repository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException(id));
@@ -100,6 +106,7 @@ public class InventoryService {
         return saved;
     }
 
+    @CacheEvict(value = "items", key = "#id")
     public void deleteItem(Long id) {
         if (!repository.existsById(id)) {
             throw new ItemNotFoundException(id);
