@@ -12,6 +12,6 @@ public class PingController {
 
     @GetMapping("/ping")
     public Map<String, String> ping() {
-        return Map.of("status", "pong", "version", "1");
+        return Map.of("status", "pong-v1", "version", "1");
     }
 }

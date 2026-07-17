@@ -19,6 +19,6 @@ class PingControllerTest {
     void ping_returnsPong() throws Exception {
         mockMvc.perform(get("/api/v1/ping"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("pong"));
+                .andExpect(jsonPath("$.status").value("pong-v1"));
     }
 }
