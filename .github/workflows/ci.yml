@@ -62,21 +62,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ---------- JOB 3: DEPLOY TO EC2 (only if image was pushed) ----------
+  # ---------- JOB 3: DEPLOY TO k3s (only if image was pushed) ----------
   deploy:
     needs: build-and-push       # waits for the image to be in ECR
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to EC2 over SSH
+      - name: Deploy to k3s over SSH
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd ~/app
-            aws ecr get-login-password --region ap-south-1 \
-              | docker login --username AWS --password-stdin 281535664028.dkr.ecr.ap-south-1.amazonaws.com
-            docker compose pull
-            docker compose up -d
-            docker image prune -f
+            export KUBECONFIG=/home/ec2-user/.kube/config
+
+            # 1. refresh the ECR image-pull secret (its token expires ~12h)
+            kubectl create secret docker-registry ecr-secret -n inventory \
+              --docker-server=281535664028.dkr.ecr.ap-south-1.amazonaws.com \
+              --docker-username=AWS \
+              --docker-password="$(aws ecr get-login-password --region ap-south-1)" \
+              --dry-run=client -o yaml | kubectl apply -f -
+
+            # 2. roll out the image built for THIS commit (immutable SHA tag)
+            kubectl set image deployment/inventory-app -n inventory \
+              inventory-app=281535664028.dkr.ecr.ap-south-1.amazonaws.com/inventory-management:${{ github.sha }}
+
+            # 3. wait for the rollout to finish (fails the job if it stalls)
+            kubectl rollout status deployment/inventory-app -n inventory --timeout=180s
